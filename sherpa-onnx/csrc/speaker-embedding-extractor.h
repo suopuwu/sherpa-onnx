@@ -5,6 +5,7 @@
 #ifndef SHERPA_ONNX_CSRC_SPEAKER_EMBEDDING_EXTRACTOR_H_
 #define SHERPA_ONNX_CSRC_SPEAKER_EMBEDDING_EXTRACTOR_H_
 
+#include <functional>
 #include <memory>
 #include <string>
 #include <vector>
@@ -61,6 +62,14 @@ class SpeakerEmbeddingExtractor {
   //
   // You have to ensure IsReady(s) returns true before you call this method.
   std::vector<float> Compute(OnlineStream *s) const;
+
+  // suopTranscriber local patch: batched form of Compute() above — see
+  // SpeakerEmbeddingExtractorImpl::ComputeBatch()'s doc comment (including
+  // for progressCallback's semantics). Every stream must satisfy
+  // IsReady(s) already, same precondition as Compute().
+  std::vector<std::vector<float>> ComputeBatch(
+      const std::vector<OnlineStream *> &streams,
+      const std::function<void(int32_t, int32_t)> &progressCallback = {}) const;
 
  private:
   std::unique_ptr<SpeakerEmbeddingExtractorImpl> impl_;
