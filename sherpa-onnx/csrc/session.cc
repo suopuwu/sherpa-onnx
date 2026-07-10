@@ -306,6 +306,20 @@ Ort::SessionOptions GetSessionOptionsImpl(
         // The CUDA provider is available, proceed with setting the options
         OrtCUDAProviderOptions options;
 
+        // suopTranscriber local patch (see patches/sherpa-onnx-batch-
+        // segmentation.patch): default arena_extend_strategy (0 =
+        // kNextPowerOfTwo) grows the BFC arena by rounding each extension
+        // up to a power-of-two-sized chunk, so a single ~875 MB Conv
+        // workspace request can trigger a cudaMalloc for something much
+        // larger than what's actually needed — far more likely to fail on
+        // a fragmented device address space (this process also runs
+        // whisper.cpp's own independent CUDA allocator concurrently) even
+        // when aggregate free VRAM is plentiful. 1 = kSameAsRequested
+        // allocates exactly the requested size instead, which is
+        // onnxruntime's own documented mitigation for this exact
+        // "Failed to allocate memory for requested buffer" BFCArena error.
+        options.arena_extend_strategy = 1;
+
         if (provider_config != nullptr) {
           options.device_id = provider_config->device;
           options.cudnn_conv_algo_search = OrtCudnnConvAlgoSearch(
